@@ -18,7 +18,6 @@ and password(s)) to stdout.
 
 import getopt
 import pexpect
-from socket import *
 from vpn_lib import *
 
 
