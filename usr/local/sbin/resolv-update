@@ -1,0 +1,70 @@
+#!/bin/bash - 
+
+set -o nounset                              # Treat unset variables as an error
+
+function usage ()
+{
+	cat <<- EOT
+
+  Update /etc/resolv.conf if VPN creates bad entries.
+  It's necessary to set bad resolver(s) ip in script
+  Usage :  ${0##/*/} [options] [--] 
+
+  Options: 
+  -h|help       Display this message
+  -n            max attepmts of uptade /etc/resolv.conf (default 600)
+  -N            update now (unconditionally)
+  -v            verbose
+
+	EOT
+}    # ----------  end of function usage  ----------
+
+max_try=600
+do_now=false
+verbose=false
+while getopts ":n:Nvh" opt
+do
+  case $opt in
+    h|help )  usage; exit 0   ;;
+    n ) max_try="${OPTARG}" ;;
+    N ) do_now=true ;;
+    v ) verbose=true ;;
+    \? )  echo -e "\n  Option does not exist : $OPTARG\n"
+          usage; exit 1   ;;
+  esac
+done
+shift $(($OPTIND-1))
+
+[[ $do_now == true ]] && {
+    [[ $verbose == true ]] && {
+        echo "updating /etc/resolv.conf unconidionally ..."
+    }
+    # set your bad resolver ip
+    sed -i '/10\.129\.10/d' /etc/resolv.conf
+    exit 0
+}
+
+while true; do
+    # set your bad resolver ip
+    bad_resolver=$(grep '10\.129\.10' /etc/resolv.conf | wc -l)
+    [[ $bad_resolver -gt 0 ]] && {
+        [[ $verbose == true ]] && {
+            echo "Bad resolver(s) found. Updating /etc/resolv.conf ..."
+        }
+        sleep 1
+        # set your bad resolver ip
+        sed -i '/10\.129\.10/d' /etc/resolv.conf
+        exit 0
+    }
+    ((max_try-=1))
+    [[ $max_try -lt 0 ]] && {
+        [[ $verbose == true ]] && {
+            echo "Max attempts reached. Giving up."
+        }
+        exit 1
+    }
+    sleep 1
+done
+
+exit 0
+

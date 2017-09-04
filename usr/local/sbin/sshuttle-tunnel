@@ -1,0 +1,142 @@
+#!/bin/bash - 
+#===============================================================================
+#
+#          FILE: sshuttle-tunnel
+# 
+#         USAGE: ./sshuttle-tunnel 
+# 
+#   DESCRIPTION: 
+# 
+#       OPTIONS: ---
+#  REQUIREMENTS: ---
+#          BUGS: ---
+#         NOTES: ---
+#        AUTHOR: Marek Płonka (marekpl), marek.plonka@nask.pl
+#  ORGANIZATION: NASK
+#       CREATED: 03.09.2017 11:21:05
+#      REVISION:  ---
+#===============================================================================
+
+set -o nounset                              # Treat unset variables as an error
+
+#===============================================================================
+#  GLOBAL DECLARATIONS
+#===============================================================================
+port=22
+cmd="none"
+interval=10
+max_try=60
+notification=false
+check_cmd="/usr/local/bin/check_port"
+
+#===============================================================================
+#  FUNCTION DEFINITIONS
+#===============================================================================
+#---  FUNCTION  ----------------------------------------------------------------
+#         NAME:  usage
+#  DESCRIPTION:  Display usage information.
+#-------------------------------------------------------------------------------
+function usage ()
+{
+	cat <<- EOT
+
+  Create VPN tunnel via ssh.
+  Usage :  ${0##/*/} [options] [--] 
+
+  Options: 
+  -h|help       Display this message
+  -m            hostname or ip (no default)
+  -p            port (default 22)
+  -u            user (no default)
+  -c            command [start|stop|status]
+  -i            interval between attempts (default 10s)
+  -n            max attepts number (default 60)
+  -g            notification on (default off)
+
+	EOT
+}    # ----------  end of function usage  ----------
+#===============================================================================
+#  MAIN SCRIPT
+#===============================================================================
+#-----------------------------------------------------------------------
+#  Handle command line arguments
+#-----------------------------------------------------------------------
+while getopts ":m:u:p:c:i:n:gh" opt
+do
+  case $opt in
+    h|help )  usage; exit 0   ;;
+    m ) machine="${OPTARG}" ;;
+    u ) user="${OPTARG}" ;;
+    p ) port="${OPTARG}" ;;
+    c ) cmd="${OPTARG}" ;;
+    i ) interval="${OPTARG}" ;;
+    n ) max_try="${OPTARG}" ;;
+    g ) notification=true ;;
+    \? )  echo -e "\n  Option does not exist : $OPTARG\n"
+          usage; exit 2   ;;
+  esac
+done
+shift $(($OPTIND-1))
+#-------------------------------------------------------------------------------
+pid_file="/var/run/sshuttle-$machine.pid"
+cfg_file="$(dirname $0)/sshuttle-$machine.cfg"
+#echo "pid_file: $pid_file"
+#echo "cfg_file: $cfg_file"
+
+case $cmd in
+    start)
+        [[ -f "$cfg_file" ]] || {
+            echo "No config file: $cfg_file"
+            exit 1
+        }
+        sshuttle_cmd="sshuttle --auto-nets --daemon --pidfile="
+        sshuttle_cmd+="\"$pid_file\" --remote=$user@$machine:$port "
+        while read line; do
+            line=$(echo "$line" | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+            [[ -z "$line" ]] && {
+                continue
+            } || {
+                [[ ${line[@]:0:1} == "#" ]] && {
+                    continue
+                } || {
+                    sshuttle_cmd+="$line "
+                }
+            }
+        done < "$cfg_file"
+        check_cmd+=" -m $machine -p $port -i $interval -n $max_try"
+        [[ $notification == true ]] && {
+            check_cmd+=" -g"
+        }
+#        echo "sshuttle_cmd: $sshuttle_cmd"
+        eval "$sshuttle_cmd"
+#        echo $?
+#        echo "check_cmd: $check_cmd"
+        eval "$check_cmd"
+        exit $?
+        ;;
+    stop|status)
+        [[ -f "$pid_file" ]] && {
+            sshuttle_pid=$(cat "$pid_file")
+            [[ "$cmd" == "stop" ]] && {
+                kill $sshuttle_pid
+                echo -ne "$sshuttle_pid: "
+                while [ -f "$pid_file" ]; do
+                    true
+                done
+                echo "killed"
+                exit 0
+            } || {
+                sshuttle_name=$(ps -eU root | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//' | grep ^$sshuttle_pid | awk '{print $NF}')
+                echo -e "PID: $sshuttle_pid\tname: $sshuttle_name"
+                exit 0
+            }
+        } || {
+            echo "No PID file: $pid_file"
+            exit 1
+        }
+        ;;
+    *) usage; exit 2 ;;
+esac
+
+exit 0
+

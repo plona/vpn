@@ -1,0 +1,116 @@
+#!/bin/bash - 
+#===============================================================================
+#
+#          FILE: check_port
+# 
+#         USAGE: ./check_port 
+# 
+#   DESCRIPTION: 
+# 
+#       OPTIONS: ---
+#  REQUIREMENTS: ---
+#          BUGS: ---
+#         NOTES: ---
+#        AUTHOR: Marek Płonka (marekpl), marek.plonka@nask.pl
+#  ORGANIZATION: NASK
+#       CREATED: 03.09.2017 09:13:45
+#      REVISION:  ---
+#===============================================================================
+
+set -o nounset                              # Treat unset variables as an error
+
+#===============================================================================
+#  GLOBAL DECLARATIONS
+#===============================================================================
+interval=10
+max_try=60
+notification=false
+
+#===============================================================================
+#  FUNCTION DEFINITIONS
+#===============================================================================
+#---  FUNCTION  ----------------------------------------------------------------
+#         NAME:  usage
+#  DESCRIPTION:  Display usage information.
+#-------------------------------------------------------------------------------
+function usage ()
+{
+	cat <<- EOT
+
+  Cheks if port is open.
+  Usage :  ${0##/*/} [options] [--] 
+
+  Options: 
+  -h|help       Display this message
+  -m            hostname or ip (no default)
+  -p            port (no default)
+  -i            interval between attempts (default 10s)
+  -n            max attepts number (default 60)
+  -g            notification on (default off)
+
+	EOT
+}    # ----------  end of function usage  ----------
+
+#---  FUNCTION  ----------------------------------------------------------------
+#          NAME:  send_message
+#   DESCRIPTION:  
+#    PARAMETERS:  
+#       RETURNS:  
+#-------------------------------------------------------------------------------
+send_message ()
+{
+    local message m
+    m="$machine:$port -> "
+    [[ $1 -eq 0 ]] && { 
+        message="$m connection successful!"
+        urgency="normal"
+    } || {
+        message="$m max attempts number exceed. Giving up."
+        urgency="critical"
+    }
+    [[ $notification == true ]] && {
+        [[ $notify == true ]] && {
+            notify-send --urgency=$urgency "$message"
+        } || {
+            echo "$message"
+        }
+    }
+
+}    # ----------  end of function send_message  ----------
+#===============================================================================
+#  MAIN SCRIPT
+#===============================================================================
+#-----------------------------------------------------------------------
+#  Handle command line arguments
+#-----------------------------------------------------------------------
+while getopts ":m:p:i:n:gh" opt
+do
+  case $opt in
+    h|help )  usage; exit 0   ;;
+    m ) machine="${OPTARG}" ;;
+    p ) port="${OPTARG}" ;;
+    i ) interval="${OPTARG}" ;;
+    n ) max_try="${OPTARG}" ;;
+    g ) notification=true ;;
+    \? )  echo -e "\n  Option does not exist : $OPTARG\n"
+          usage; exit 1   ;;
+  esac
+done
+shift $(($OPTIND-1))
+#-------------------------------------------------------------------------------
+xrandr > /dev/null 2>&1
+[[ $? -eq 0 ]] && { notify=true; } || { notify=false; }
+
+while true; do
+    nc -zv -w $interval $machine $port > /dev/null 2>&1
+    [[ $? -eq 0 ]] && {
+        send_message 0
+        exit 0
+    }
+    ((max_try-=1))
+    [[ $max_try -lt 0 ]] && {
+        send_message 1
+        exit 1
+    }
+done
+
