@@ -18,15 +18,16 @@ from icons import *
 
 
 class vpn_lib:
-    def __init__(self, homeDir, scriptName, textonly=False, noicon=False):
+    def __init__(self, homeDir, scriptName, textonly=False, debug=False, noicon=False):
         self.homeDir = homeDir
         self.scriptName = scriptName
         self.textonly = textonly
+        self.debug = debug
         self.noicon = noicon
         self.pidfile = self.homeDir + "/" + self.scriptName + ".pid"
         self.config = ConfigParser.ConfigParser()
         self.config.read(self.homeDir + "/" + self.scriptName + ".secret")
-        if not self.textonly:
+        if not self.textonly and not self.debug:
             # create a new window
             self.statusIcon = gtk.StatusIcon()
             self.statusIcon.connect('popup-menu', self.on_right_click)
@@ -117,7 +118,7 @@ class vpn_lib:
                 "Connection is already established or\npreceding terminated with error.\nCheck processes and delete file."
               ]
         if os.path.exists(self.pidfile):
-            if self.textonly:
+            if self.textonly or self.debug:
                 print msg[0], msg[1]
             else:
                 n = notify2.Notification(msg[0], msg[1], errorIcon)
@@ -128,10 +129,10 @@ class vpn_lib:
     def sysCmds(self, section):
         try:
             cmds = json.loads(self.config.get(section, "systemCMD"))
-            if self.textonly:
+            if self.textonly or self.debug:
                 print "\n", section + ":"
             for cmd in cmds:
-                if self.textonly:
+                if self.textonly or self.debug:
                     print " ", cmd
                 try:
                     os.system(cmd)
@@ -151,7 +152,7 @@ class vpn_lib:
 
         if not pid:
             msg = ["pidfile " + self.pidfile + " does not exists!", "Has been deleted?\nClose connection by killing process"]
-            if self.textonly:
+            if self.textonly or self.debug:
                 print msg[0], msg[1]
             else:
                 n = notify2.Notification(msg[0], msg[1], errorIcon)
@@ -169,7 +170,7 @@ class vpn_lib:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
                     msg = "Closed VPN connection: " + self.scriptName
-                    if self.textonly:
+                    if self.textonly or self.debug:
                         print msg
                     else:
                         n = notify2.Notification(msg, "", connectingIcon)

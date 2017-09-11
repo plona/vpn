@@ -8,11 +8,12 @@ Options:
 [-r | --restart]
 [-n | --noicon]              - no icon in tray, log to stdout
 [-t | --textonly]            - text mode
+[-d | --debug]               - debug mode
 [-h | --help | <none>]
 
 Configuration in <script_name>.secret, log in <script_name>.log in scripts
 home dir.
-Attention! Option -t causes writes out full pexpect log (includes username
+Warning! Option -d causes writes out full pexpect log (includes username
 and password(s)) to stdout.
 """
 
@@ -25,7 +26,7 @@ class openconnect():
     def __init__(self):
         self.__noicon = myVPN.noicon
         self.__textonly = myVPN.textonly
-        if self.__textonly:
+        if self.__textonly or self.__debug:
             self.__logFile = sys.stdout
         else:
             self.__logFile = open(homeDir + "/" + scriptName + ".log", "w")
@@ -43,7 +44,7 @@ class openconnect():
         except:
             msg = "Bad credentials file format"
             self.__logFile.write(msg + ":\n" + traceback.format_exc())
-            if not self.__textonly:
+            if not self.__textonly and not self.__debug:
                 n = notify2.Notification(msg, "Check file: " + scriptName + ".log")
                 n.set_urgency(2)
                 n.show()
@@ -61,7 +62,7 @@ class openconnect():
         self.__logFile.write("spawning:\n" + self.__cmd + "\n")
         self.__logFile.write(80 * "-" + "\n")
         msg = "Setting up connection " + scriptName
-        if not self.__textonly:
+        if not self.__textonly and not self.__debug:
             n = notify2.Notification(msg, "", connectingIcon)
             n.set_urgency(0)
             n.show()
@@ -71,7 +72,7 @@ class openconnect():
         myVPN.sysCmds("preVPNstart")
         try:
             vpn = pexpect.spawn(self.__cmd)
-            if self.__textonly:
+            if self.__debug:
                 vpn.logfile = self.__logFile
             else:
                 vpn.logfile_read = self.__logFile
@@ -87,7 +88,7 @@ class openconnect():
                 file(homeDir + "/" + scriptName + ".pid", "w").write(str(os.getpid()))
                 myVPN.sysCmds("postVPNstart")
                 msg = "Connection " + scriptName + " ready"
-                if not self.__textonly:
+                if not self.__textonly and not self.__debug:
                     n.update(msg, "" if self.__noicon == True else "Right click to close", connectionOKIcon)
                     n.set_urgency(1)
                     n.show()
@@ -100,19 +101,19 @@ class openconnect():
 
         except pexpect.EOF:
             self.__logFile.write("pexpect: EOF\n")
-            if not self.__textonly:
+            if not self.__textonly and not self.__debug:
                 n.update("pexpect: EOF", "", errorIcon)
         except pexpect.TIMEOUT:
             self.__logFile.write("Connection timeout\n")
-            if not self.__textonly:
+            if not self.__textonly and not self.__debug:
                 n.update("Connection timeout", "", errorIcon)
         except:
             self.__logFile.write("Unhandled error: " + traceback.format_exc())
-            if not self.__textonly:
+            if not self.__textonly and not self.__debug:
                 n.update("Unhandled error", traceback.format_exc(), errorIcon)
             raise
         finally:
-            if not self.__textonly:
+            if not self.__textonly and not self.__debug:
                 n.set_urgency(2)
                 n.show()
 
