@@ -26,6 +26,7 @@ class openconnect():
     def __init__(self):
         self.__noicon = myVPN.noicon
         self.__textonly = myVPN.textonly
+        self.__debug = myVPN.debug
         if self.__textonly or self.__debug:
             self.__logFile = sys.stdout
         else:
@@ -127,26 +128,29 @@ def main(argv):
     if len(argv) == 0: usage()
 
     try:
-        opts, args = getopt.getopt(argv, "skrnith",
+        opts, args = getopt.getopt(argv, "skrnitdh",
                                    ["start",
                                     "kill",
                                     "restart",
                                     "noicon",
                                     "textonly",
+                                    "debug",
                                     "help"])
     except getopt.GetoptError: usage()
 
-    noicon = textonly = False
+    noicon = textonly = debug = False
     for opt, arg in opts:
         if   opt in ("-n", "--noicon"):
             noicon = True
         elif opt in ("-t", "--textonly"):
             textonly = True
+        elif opt in ("-d", "--debug"):
+            debug = True
         elif opt in ("-h", "--help"):
             usage()
 
     global myVPN
-    myVPN = vpn_lib(homeDir, scriptName, textonly, noicon)
+    myVPN = vpn_lib(homeDir, scriptName, textonly, debug, noicon)
     for opt, arg in opts:
         if opt in ("-k", "--kill"):
             myVPN.killVpn()
