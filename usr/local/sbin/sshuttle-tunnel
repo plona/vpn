@@ -92,15 +92,12 @@ case $cmd in
         sshuttle_cmd="sshuttle --auto-nets --daemon --pidfile="
         sshuttle_cmd+="\"$pid_file\" --remote=$user@$machine:$port "
         while read line; do
-            line=$(echo "$line" | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+            line=$(echo "$line" | sed -e 's/#.*$//' -e '/^$/d')
             [[ -z "$line" ]] && {
                 continue
             } || {
-                [[ ${line[@]:0:1} == "#" ]] && {
-                    continue
-                } || {
-                    sshuttle_cmd+="$line "
-                }
+#                echo $line
+                sshuttle_cmd+=" $line"
             }
         done < "$cfg_file"
         check_cmd+=" -m $machine -p $port -i $interval -n $max_try"
