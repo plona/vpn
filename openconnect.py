@@ -33,9 +33,9 @@ class openconnect():
             self.__logFile = open(homeDir + "/" + scriptName + ".log", "w")
         myVPN.checkPidFile()
         try:
-            self.__vpnServer = myVPN.config.get("vpn", "vpnServer")
-            self.__serverCert = myVPN.config.get("vpn", "servercert")
-            self.__authGroup = myVPN.config.get("vpn", "authgroup")
+            # self.__vpnServer = myVPN.config.get("vpn", "vpnServer")
+            # self.__serverCert = myVPN.config.get("vpn", "servercert")
+            # self.__authGroup = myVPN.config.get("vpn", "authgroup")
 
             self.__adUser = myVPN.config.get("auth", "adUser")
             self.__adPasswd = myVPN.config.get("auth", "adPasswd")
@@ -52,9 +52,9 @@ class openconnect():
             raise
 
         # self.__cmd += "--juniper "
-        self.__cmd += "--authgroup=" + self.__authGroup + " "
-        self.__cmd += "--servercert " + self.__serverCert + " "
-        self.__cmd += self.__vpnServer
+        # self.__cmd += "--authgroup=" + self.__authGroup + " "
+        # self.__cmd += "--servercert " + self.__serverCert + " "
+        # self.__cmd += self.__vpnServer
 
     def startVPN(self):
         tokenPass = [""]
@@ -83,7 +83,7 @@ class openconnect():
             if 0 == vpn.expect_exact("user#2:"): vpn.sendline(self.__adUser)
             if 0 == vpn.expect_exact("password#2:"): vpn.sendline(self.__adPasswd)
             # Ustawienie DTLS się nie powiodło. Używanie SSL zamiast tego
-            i = vpn.expect(["DTLS", "SSL"])
+            i = vpn.expect(["UDP", "SSL"])
             if i in (0, 1):
                 # self.startSSHuttle()
                 file(homeDir + "/" + scriptName + ".pid", "w").write(str(os.getpid()))
